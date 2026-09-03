@@ -796,22 +796,24 @@ def load_notes():
 
 
 def page_notes_index(latest, notes):
-    lis = "".join('<li><span class=muted>%s</span> <a href="%s.html">%s</a></li>'
+    lis = "".join('<li><span class=muted>%s</span> &nbsp; <a href="%s.html">%s</a></li>'
                   % (n["date"], n["slug"], esc(n["title"])) for n in notes)
-    body = ('<h1>ETRX Notes</h1>'
-            '<p>The index prints numbers and nothing else. Commentary lives here, separately: '
+    body = ('<header class=mast><h1>ETRX Notes</h1>'
+            '<p class=sub>The index prints numbers and nothing else. Commentary lives here, separately: '
             'what moved, what is about to move, and where public coverage gets the scope wrong. '
-            'Every explanation of a move traces to a verified entry in the policy ledger.</p>'
-            '<ul class=plain>' + lis + '</ul>'
-            '<p class=muted>Research and commentary. Not investment advice.</p>')
+            'Every explanation of a move traces to a verified entry in the policy ledger.</p></header>'
+            '<section class=prose><ul class=plain>' + lis + '</ul>'
+            '<p class=muted>Research and commentary. Not investment advice.</p></section>')
     return shell("ETRX Notes", "notes/index.html", body, latest, depth=1)
 
 
 def page_note(latest, n):
-    body = ('<p class=muted><a href="index.html">ETRX Notes</a> · %s</p>' % n["date"]
-            + md_to_html(n["md"])
+    md_body = "\n".join(l for l in n["md"].splitlines() if not l.startswith("# "))
+    body = ('<header class=mast><h1>%s</h1><p class=sub><a href="index.html">ETRX Notes</a> · %s</p></header>'
+            % (esc(n["title"]), n["date"])
+            + '<section class=prose>' + md_to_html(md_body)
             + '<p class=muted>Research and commentary. Not investment advice. '
-              'The index itself: <a href="../index.html">the current print</a>.</p>')
+              'The index itself: <a href="../index.html">the current print</a>.</p></section>')
     return shell(n["title"] + " · ETRX Notes", "notes/index.html", body, latest, depth=1)
 
 
@@ -819,29 +821,30 @@ def page_reconcile(latest):
     head = next(x for x in latest["series"] if x["id"] == "ETRX-US")
     steel = next(x for x in latest["series"] if x["id"] == "ETRX-STEEL")
     dm = month_name(latest["data_month"])
-    body = ('<h1>Reconciliation</h1>'
-        '<p>Four numbers are commonly called "the US tariff rate". They measure different things. '
-        'This page states what each one is, its latest value where the source publishes one, and why the gaps exist. '
-        'It is updated every print.</p>'
-        '<table class=data><thead><tr><th>Source</th><th>What it measures</th><th>Cadence</th><th>Latest stated</th></tr></thead><tbody>'
-        '<tr><td><b>ETRX</b></td><td>Realized: calculated duty assessed at entry as a share of customs value, by origin and HS chapter, imports for consumption, HS 98 and 99 excluded. First print settles.</td>'
+    body = ('<header class=mast><h1>Reconciliation</h1>'
+        '<p class=sub>Four numbers are called "the US tariff rate". They measure different things. '
+        'What each one is, its latest stated value, and why the gaps exist. Updated every print.</p></header>'
+        '<section class=prose>'
+        '<div class=tblwrap><table class=data><thead><tr><th>Source</th><th>What it measures</th><th>Cadence</th><th>Latest stated</th></tr></thead><tbody>'
+        '<tr><td class=name><b>ETRX</b></td><td>Realized: calculated duty assessed at entry as a share of customs value, by origin and HS chapter, imports for consumption, HS 98 and 99 excluded. First print settles.</td>'
         '<td>Monthly, on the Census FT-900 date</td><td><b>' + pct(head["rate"]) + '</b> (' + dm + ')</td></tr>'
-        '<tr><td><b>Penn Wharton Budget Model</b></td><td>Realized effective rate from USITC DataWeb customs data, national aggregate with partner and product breakdowns. Research output, revised as published.</td>'
+        '<tr><td class=name><b>Penn Wharton Budget Model</b></td><td>Realized effective rate from USITC DataWeb customs data, national aggregate with partner and product breakdowns. Research output, revised as published.</td>'
         '<td>Irregular updates</td><td>7.1% for June 2026 (post of August 10, 2026; China 23.2%, steel and aluminum 40.9%, vehicles 13.2%)</td></tr>'
-        '<tr><td><b>Yale Budget Lab</b></td><td>Statutory: the average tariff rate implied by policy as written, applied to trade weights, including actions announced but not yet collected. Measures the policy, not the border.</td>'
-        '<td>Updated with each policy action</td><td>See <a href="https://budgetlab.yale.edu/topic/trade">budgetlab.yale.edu</a> (statutory, not comparable one to one)</td></tr>'
-        '<tr><td><b>Treasury customs receipts</b></td><td>Cash deposited into the Treasury as customs duties, net of refunds, on a cash-timing basis (Monthly Treasury Statement).</td>'
-        '<td>Monthly</td><td>See <a href="https://fiscaldata.treasury.gov/">fiscaldata.treasury.gov</a> (dollars, not a rate)</td></tr>'
-        '</tbody></table>'
+        '<tr><td class=name><b>Yale Budget Lab</b></td><td>Statutory: the average tariff rate implied by policy as written, applied to trade weights, including actions announced but not yet collected. Measures the policy, not the border.</td>'
+        '<td>Updated with each policy action</td><td><a href="https://budgetlab.yale.edu/topic/trade">budgetlab.yale.edu</a> (statutory, not comparable one to one)</td></tr>'
+        '<tr><td class=name><b>Treasury customs receipts</b></td><td>Cash deposited into the Treasury as customs duties, net of refunds, on a cash-timing basis (Monthly Treasury Statement).</td>'
+        '<td>Monthly</td><td><a href="https://fiscaldata.treasury.gov/">fiscaldata.treasury.gov</a> (dollars, not a rate)</td></tr>'
+        '</tbody></table></div>'
         '<h2>Why the numbers differ</h2>'
         '<ul>'
-        '<li><b>Paper versus border.</b> A statutory rate counts every duty the law imposes. A realized rate counts what was assessed on the goods that actually entered: exemptions, USMCA carve-outs, exclusions and trade shifting away from the highest rates all lower it. The gap between the two is information, not error.</li>'
+        '<li><b>Paper versus border.</b> A statutory rate counts every duty the law imposes. A realized rate counts what was assessed on the goods that actually entered: exemptions, USMCA carve-outs, exclusions and trade shifting away from the highest rates all lower it. The gap is information, not error.</li>'
         '<li><b>Calculated duty versus cash.</b> ETRX uses the duty fixed at entry. Cash receipts arrive later and are reduced by refunds; after the Supreme Court struck down the IEEPA tariffs in February 2026, a refund process exceeding $100B makes cash-based measures hard to read for years. Calculated duty is immune to it.</li>'
-        '<li><b>Baskets.</b> ETRX steel (HS 72 and 73, all origins) printed ' + pct(steel["rate"]) + ' in ' + dm + '; Penn Wharton groups steel with aluminum. Vehicles are published by ETRX per origin (EU, Mexico, Canada), by Penn Wharton for all origins. Same data, different cuts.</li>'
+        '<li><b>Baskets.</b> ETRX steel (HS 72 and 73, all origins) printed ' + pct(steel["rate"]) + ' in ' + dm + '; Penn Wharton groups steel with aluminum. ETRX publishes vehicles per origin (EU, Mexico, Canada); Penn Wharton for all origins. Same data, different cuts.</li>'
         '<li><b>Revisions.</b> Census revises trade data. ETRX never restates a first print and publishes revisions separately; research outputs generally republish the revised figure.</li>'
-        '<li><b>Coverage.</b> ETRX uses imports for consumption and excludes HS chapters 98 and 99 (returned goods, special provisions) and AD/CVD duties. Aggregates that include them differ by construction.</li>'
+        '<li><b>Coverage.</b> ETRX uses imports for consumption and excludes HS chapters 98 and 99 and AD/CVD duties. Aggregates that include them differ by construction.</li>'
         '</ul>'
-        '<p class=muted>External figures are quoted with their publication date and are not restated by ETRX. Reproduce any ETRX value on the <a href="verify.html">verify page</a>.</p>')
+        '<p class=muted>External figures are quoted with their publication date and never restated by ETRX. Reproduce any ETRX value on the <a href="verify.html">verify page</a>.</p>'
+        '</section>')
     return shell("Reconciliation", "reconcile.html", body, latest, description="How ETRX differs from Penn Wharton, Yale Budget Lab and Treasury receipts, and why.")
 
 
