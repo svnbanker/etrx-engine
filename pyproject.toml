@@ -1,0 +1,9 @@
+[project]
+name = "tariffindex"
+version = "0.1.0"
+description = "ETRX — US Effective Tariff Rate Index print engine"
+requires-python = ">=3.12"
+dependencies = [
+    "requests>=2.32",
+    "requests-oauthlib>=2.0.0",
+]
