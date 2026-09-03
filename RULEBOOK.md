@@ -104,3 +104,12 @@ ETRX is administered with the IOSCO Principles for Financial Benchmarks (July 20
 - The published index series, their charts, and this rulebook are licensed CC BY 4.0: free to use, cite and republish, including in commercial research, with attribution ("ETRX — US Effective Tariff Rate Index"). *(Amended 2026-09-03: an earlier non-commercial clause was removed because it made citation in bank and broker research ambiguous.)*
 - Commercial redistribution of the data feed, and any use of the index as the settlement reference of a financial product, require a license from the administrator.
 - Research and commentary. Not investment advice. Values are derived from official US government data; the administrator does not warrant fitness for any particular purpose.
+
+## 14. Continuity and cessation
+
+- **Continuity.** The calculation code is public (github.com/svnbanker/etrx-engine, MIT), the vintage ledger is public, and the inputs are official government data. Any competent party can continue the index from the published state; nothing needed to compute a print is held privately. The engine runs on two independent schedulers.
+- **Planned cessation.** If the administrator decides to stop publishing, it will announce the decision at least twelve months in advance on the site and to every licensee, keep printing through the notice period, and leave every published value, the rulebook and the ledger online in an archived, read-only form.
+- **Forced cessation.** If the underlying Census data series is discontinued or materially redefined, the administrator will publish the fact within one print cycle, will not estimate or substitute, and will treat the last first-print values as final. Licensees are notified the same day.
+- **Transfer.** The index may be transferred to a successor administrator only with the rulebook, the ledger and this clause intact, and with public notice.
+
+*(Added 2026-09-03 in response to the IOSCO self-assessment gaps on continuity and cessation.)*

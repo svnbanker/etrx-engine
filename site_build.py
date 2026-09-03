@@ -371,6 +371,8 @@ NAV = [
     ("calendar.html", "Calendar"),
     ("about.html", "About"),
     ("press.html", "Press"),
+    ("reconcile.html", "Reconcile"),
+    ("notes/index.html", "Notes"),
 ]
 
 FAVICON = ("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E"
@@ -635,6 +637,7 @@ reproduce a published value from the government's own data in a few minutes.</p>
 <div><b>Rate</b><span>%(cd)s ÷ %(cv)s = %(rate_full)s</span></div>
 </div>
 <h3>Route 1 — the Census API (one URL)</h3>
+<p>The calculation code is open source: <a href="https://github.com/svnbanker/etrx-engine">github.com/svnbanker/etrx-engine</a>. Clone it, run the selftest, and print a month yourself.</p>
 <p>Get a free key at <a href="https://api.census.gov/data/key_signup.html">api.census.gov/data/key_signup.html</a>
 (instant, email activation), then open:</p>
 <div class=formula>%(api)s</div>
@@ -757,6 +760,7 @@ value of US imports for consumption, by country of origin and HS chapter, from o
 US Census Bureau data. The methodology is public, the calculation is deterministic, and
 every published value can be reproduced by anyone from the same public data.</p>
 <h2>Independence</h2>
+<p>The engine is public (<a href="https://github.com/svnbanker/etrx-engine">etrx-engine</a>, MIT). Publishing the code removes key-person risk: anyone can reproduce every number, and the index does not depend on one person to run.</p>
 <p>The administrator holds no positions referencing the index, accepts no sponsorship,
 and has no affiliation with any exchange, dealer, trade association or government body.
 Input data is official statistics the administrator cannot influence. The index is
@@ -773,6 +777,72 @@ for the fallback policy, revision policy and IOSCO alignment statement, the
 </section>
 """ % {"admin": esc(SITE["admin_line"]), "contact": contact_line()}
     return shell("About — ETRX", "about.html", body, latest)
+
+
+NOTES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "notes")
+
+
+def load_notes():
+    items = []
+    if not os.path.isdir(NOTES_DIR):
+        return items
+    for f in sorted(os.listdir(NOTES_DIR), reverse=True):
+        if not f.endswith(".md"):
+            continue
+        md = open(os.path.join(NOTES_DIR, f)).read()
+        title = next((l[2:].strip() for l in md.splitlines() if l.startswith("# ")), f[:-3])
+        items.append({"slug": f[:-3], "date": f[:10], "title": title, "md": md})
+    return items
+
+
+def page_notes_index(latest, notes):
+    lis = "".join('<li><span class=muted>%s</span> <a href="%s.html">%s</a></li>'
+                  % (n["date"], n["slug"], esc(n["title"])) for n in notes)
+    body = ('<h1>ETRX Notes</h1>'
+            '<p>The index prints numbers and nothing else. Commentary lives here, separately: '
+            'what moved, what is about to move, and where public coverage gets the scope wrong. '
+            'Every explanation of a move traces to a verified entry in the policy ledger.</p>'
+            '<ul class=plain>' + lis + '</ul>'
+            '<p class=muted>Research and commentary. Not investment advice.</p>')
+    return shell("ETRX Notes", "notes/index.html", body, latest, depth=1)
+
+
+def page_note(latest, n):
+    body = ('<p class=muted><a href="index.html">ETRX Notes</a> · %s</p>' % n["date"]
+            + md_to_html(n["md"])
+            + '<p class=muted>Research and commentary. Not investment advice. '
+              'The index itself: <a href="../index.html">the current print</a>.</p>')
+    return shell(n["title"] + " · ETRX Notes", "notes/index.html", body, latest, depth=1)
+
+
+def page_reconcile(latest):
+    head = next(x for x in latest["series"] if x["id"] == "ETRX-US")
+    steel = next(x for x in latest["series"] if x["id"] == "ETRX-STEEL")
+    dm = month_name(latest["data_month"])
+    body = ('<h1>Reconciliation</h1>'
+        '<p>Four numbers are commonly called "the US tariff rate". They measure different things. '
+        'This page states what each one is, its latest value where the source publishes one, and why the gaps exist. '
+        'It is updated every print.</p>'
+        '<table class=data><thead><tr><th>Source</th><th>What it measures</th><th>Cadence</th><th>Latest stated</th></tr></thead><tbody>'
+        '<tr><td><b>ETRX</b></td><td>Realized: calculated duty assessed at entry as a share of customs value, by origin and HS chapter, imports for consumption, HS 98 and 99 excluded. First print settles.</td>'
+        '<td>Monthly, on the Census FT-900 date</td><td><b>' + pct(head["rate"]) + '</b> (' + dm + ')</td></tr>'
+        '<tr><td><b>Penn Wharton Budget Model</b></td><td>Realized effective rate from USITC DataWeb customs data, national aggregate with partner and product breakdowns. Research output, revised as published.</td>'
+        '<td>Irregular updates</td><td>7.1% for June 2026 (post of August 10, 2026; China 23.2%, steel and aluminum 40.9%, vehicles 13.2%)</td></tr>'
+        '<tr><td><b>Yale Budget Lab</b></td><td>Statutory: the average tariff rate implied by policy as written, applied to trade weights, including actions announced but not yet collected. Measures the policy, not the border.</td>'
+        '<td>Updated with each policy action</td><td>See <a href="https://budgetlab.yale.edu/topic/trade">budgetlab.yale.edu</a> (statutory, not comparable one to one)</td></tr>'
+        '<tr><td><b>Treasury customs receipts</b></td><td>Cash deposited into the Treasury as customs duties, net of refunds, on a cash-timing basis (Monthly Treasury Statement).</td>'
+        '<td>Monthly</td><td>See <a href="https://fiscaldata.treasury.gov/">fiscaldata.treasury.gov</a> (dollars, not a rate)</td></tr>'
+        '</tbody></table>'
+        '<h2>Why the numbers differ</h2>'
+        '<ul>'
+        '<li><b>Paper versus border.</b> A statutory rate counts every duty the law imposes. A realized rate counts what was assessed on the goods that actually entered: exemptions, USMCA carve-outs, exclusions and trade shifting away from the highest rates all lower it. The gap between the two is information, not error.</li>'
+        '<li><b>Calculated duty versus cash.</b> ETRX uses the duty fixed at entry. Cash receipts arrive later and are reduced by refunds; after the Supreme Court struck down the IEEPA tariffs in February 2026, a refund process exceeding $100B makes cash-based measures hard to read for years. Calculated duty is immune to it.</li>'
+        '<li><b>Baskets.</b> ETRX steel (HS 72 and 73, all origins) printed ' + pct(steel["rate"]) + ' in ' + dm + '; Penn Wharton groups steel with aluminum. Vehicles are published by ETRX per origin (EU, Mexico, Canada), by Penn Wharton for all origins. Same data, different cuts.</li>'
+        '<li><b>Revisions.</b> Census revises trade data. ETRX never restates a first print and publishes revisions separately; research outputs generally republish the revised figure.</li>'
+        '<li><b>Coverage.</b> ETRX uses imports for consumption and excludes HS chapters 98 and 99 (returned goods, special provisions) and AD/CVD duties. Aggregates that include them differ by construction.</li>'
+        '</ul>'
+        '<p class=muted>External figures are quoted with their publication date and are not restated by ETRX. Reproduce any ETRX value on the <a href="verify.html">verify page</a>.</p>')
+    return shell("Reconciliation", "reconcile.html", body, latest, description="How ETRX differs from Penn Wharton, Yale Budget Lab and Treasury receipts, and why.")
 
 
 def page_press(latest):
@@ -957,6 +1027,7 @@ def render_all(latest, history, revisions, schedule, rulebook_md, raw_latest_row
         "press.html": page_press(latest),
         "revisions.html": page_revisions(latest, revisions),
         "audit.html": page_audit(latest, audit_md),
+        "reconcile.html": page_reconcile(latest),
         "llms.txt": llms_txt(latest),
         "CNAME": SITE["domain"] + "\n",
         "robots.txt": "User-agent: *\nAllow: /\nSitemap: %s/sitemap.xml\n" % SITE["url"],
@@ -970,6 +1041,10 @@ def render_all(latest, history, revisions, schedule, rulebook_md, raw_latest_row
         sub = "%s · %s print: %s (%s month over month)" % (
             sid, month_name(latest["data_month"]), pct(s["rate"]), bps(s["delta_bps"]))
         out["charts/%s.svg" % slug(sid)] = standalone_chart_svg(s["label"], sub, pts, comp)
+    notes = load_notes()
+    out["notes/index.html"] = page_notes_index(latest, notes)
+    for n in notes:
+        out["notes/%s.html" % n["slug"]] = page_note(latest, n)
     pages = sorted(p for p in out if p.endswith(".html") and not p.startswith("rulebook/"))
     out["sitemap.xml"] = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
