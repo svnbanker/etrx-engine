@@ -546,10 +546,17 @@ def _csv(rows):
     return "\n".join(lines) + "\n"
 
 
-def next_print_info():
+def next_print_info(after_month=None):
+    """The next scheduled print. With after_month (the latest printed data
+    month) it is the first release covering a later month, which is right on
+    print day itself; the date-based fallback is for an empty ledger."""
+    if after_month:
+        for release, dmonth in FT900_SCHEDULE:
+            if dmonth > after_month:
+                return {"release": release, "data_month": dmonth}
     today = today_utc()
     for release, dmonth in FT900_SCHEDULE:
-        if release >= today:
+        if release > today:
             return {"release": release, "data_month": dmonth}
     return {
         "release": "TBD",
@@ -588,7 +595,7 @@ def build_latest_json(prints):
         "name": "US Effective Tariff Rate Index",
         "data_month": cur,
         "generated": today_utc(),
-        "next_print": next_print_info(),
+        "next_print": next_print_info(max(r["data_month"] for r in prints) if prints else None),
         "series": series,
         "settlement": "first print settles; revisions are logged, never restated",
         "source": "US Census Bureau, International Trade API (imports for consumption)",
