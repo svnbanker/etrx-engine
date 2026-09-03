@@ -817,6 +817,22 @@ def page_note(latest, n):
     return shell(n["title"] + " · ETRX Notes", "notes/index.html", body, latest, depth=1)
 
 
+
+def _cn_june_line():
+    """ETRX-CN for June 2026 next to Penn Wharton's 23.2% for the same month, read from the published CSV."""
+    import csv
+    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "etrx.csv")
+    try:
+        for r in csv.DictReader(open(p)):
+            if r["series_id"] == "ETRX-CN" and r["data_month"] == "2026-06":
+                v = 100 * float(r["rate"])
+                return ("ETRX-CN (China, all chapters) printed %.2f%% for June 2026; Penn Wharton states 23.2%% "
+                        "for the same month from the same USITC data. %.1f points apart, by two independent computations." % (v, abs(v - 23.2)))
+    except Exception:
+        pass
+    return "ETRX-CN (China, all chapters) is published monthly; Penn Wharton states 23.2% for June 2026."
+
+
 def page_reconcile(latest):
     head = next(x for x in latest["series"] if x["id"] == "ETRX-US")
     steel = next(x for x in latest["series"] if x["id"] == "ETRX-STEEL")
@@ -839,6 +855,7 @@ def page_reconcile(latest):
         '<ul>'
         '<li><b>Paper versus border.</b> A statutory rate counts every duty the law imposes. A realized rate counts what was assessed on the goods that actually entered: exemptions, USMCA carve-outs, exclusions and trade shifting away from the highest rates all lower it. The gap is information, not error.</li>'
         '<li><b>Calculated duty versus cash.</b> ETRX uses the duty fixed at entry. Cash receipts arrive later and are reduced by refunds; after the Supreme Court struck down the IEEPA tariffs in February 2026, a refund process exceeding $100B makes cash-based measures hard to read for years. Calculated duty is immune to it.</li>'
+        '<li><b>China, same month, two shops.</b> ' + _cn_june_line() + '</li>'
         '<li><b>Baskets.</b> ETRX steel (HS 72 and 73, all origins) printed ' + pct(steel["rate"]) + ' in ' + dm + '; Penn Wharton groups steel with aluminum. ETRX publishes vehicles per origin (EU, Mexico, Canada); Penn Wharton for all origins. Same data, different cuts.</li>'
         '<li><b>Revisions.</b> Census revises trade data. ETRX never restates a first print and publishes revisions separately; research outputs generally republish the revised figure.</li>'
         '<li><b>Coverage.</b> ETRX uses imports for consumption and excludes HS chapters 98 and 99 and AD/CVD duties. Aggregates that include them differ by construction.</li>'

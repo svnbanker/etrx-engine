@@ -1,6 +1,6 @@
 # ETRX Rulebook
 
-**US Effective Tariff Rate Index** · version 1.0 · effective 2026-08 (draft until first live print)
+**US Effective Tariff Rate Index** · version 1.1 · effective 2026-09-03 (v1.0 governed the first live print of 2026-07; v1.1 adds series, changes no formula)
 
 ## 1. Purpose and benchmark statement
 
@@ -28,7 +28,9 @@ All series use the same formula (§3) over different slices of US imports for co
 
 New series may be added under §11; existing series definitions are never changed in place.
 
-**Settlement classification.** ETRX-US, ETRX-CN-85, ETRX-CN-84, ETRX-STEEL, ETRX-APPAREL, ETRX-CA-76 and ETRX-EU-87 are **settlement-eligible**: they cover slices with substantial monthly customs value and are the series offered as references for financial products. ETRX-US-INCL is **informational** (published for reconciliation, not for settlement). ETRX-CN-95, ETRX-PHARMA, ETRX-MX-87, ETRX-CA-44 and ETRX-CA-87 are **informational pending review**: they are published on the same rules but cover narrower slices whose concentration and month-to-month behaviour are assessed before any product may reference them. Classification changes are methodology changes under §11.
+**Country headline series (added in v1.1, 2026-09-03).** For each of nine origins, the realized rate over all commercial chapters 01 to 97 (98 and 99 excluded), imports for consumption, computed by the same formula as the headline: ETRX-CN (China, 5700), ETRX-CA (Canada, 1220), ETRX-EU (European Union, 0003), ETRX-MX (Mexico, 2010), ETRX-VN (Vietnam, 5520), ETRX-JP (Japan, 5880), ETRX-KR (Korea, 5800), ETRX-TW (Taiwan, 5830), ETRX-IN (India, 5330). Live from the 2026-07 print through a per-origin HS2 scan gated at 40 populated chapters minimum. History 2010-01 to 2026-06 was reconstructed on 2026-09-03 from the published origin panel (feed vintage 2026-06, same source and formula) and is stamped `backfill` in the ledger. Adding series is non-breaking under §11: no existing value changes.
+
+**Settlement classification.** ETRX-US, ETRX-CN-85, ETRX-CN-84, ETRX-STEEL, ETRX-APPAREL, ETRX-CA-76 and ETRX-EU-87 are **settlement-eligible**: they cover slices with substantial monthly customs value and are the series offered as references for financial products. ETRX-US-INCL is **informational** (published for reconciliation, not for settlement). ETRX-CN-95, ETRX-PHARMA, ETRX-MX-87, ETRX-CA-44, ETRX-CA-87 and the nine country headline series are **informational pending review**: they are published on the same rules but cover narrower slices whose concentration and month-to-month behaviour are assessed before any product may reference them. Classification changes are methodology changes under §11.
 
 ## 3. Formulas
 

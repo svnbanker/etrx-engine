@@ -46,6 +46,24 @@ COUNTRY_CELLS = [
     ("ETRX-CA-87", "1220", "87", "Canada — vehicles (HS 87)"),
 ]
 
+# Country headline series: one HS2 scan per origin, all commercial chapters
+# 01-97 summed (98/99 excluded), imports for consumption. Informational
+# (RULEBOOK §2, v1.1). History 2010-01..2026-06 reconstructed from the origin
+# panel on 2026-09-03 (vintage_note backfill); live from the 2026-07 print.
+# (series_id, CTY_CODE, label)
+COUNTRY_HEADLINES = [
+    ("ETRX-CN", "5700", "China — all chapters"),
+    ("ETRX-CA", "1220", "Canada — all chapters"),
+    ("ETRX-EU", "0003", "European Union — all chapters"),
+    ("ETRX-MX", "2010", "Mexico — all chapters"),
+    ("ETRX-VN", "5520", "Vietnam — all chapters"),
+    ("ETRX-JP", "5880", "Japan — all chapters"),
+    ("ETRX-KR", "5800", "Korea, South — all chapters"),
+    ("ETRX-TW", "5830", "Taiwan — all chapters"),
+    ("ETRX-IN", "5330", "India — all chapters"),
+]
+MIN_HEAD_CHAPTERS = 40      # an origin scan with fewer populated chapters is suspect
+
 # Scan series: computed from the all-countries HS2 chapter scan (CTY_CODE='-').
 # chapters=None means all commercial chapters 01-97; "ALL" includes 98/99.
 SCAN_SERIES = [
@@ -59,10 +77,13 @@ REQUIRED_CHAPTERS = {"30", "61", "62", "72", "73"}
 SERIES_LABELS = dict(
     [(sid, lab) for sid, _c, _ch, lab in COUNTRY_CELLS]
     + [(sid, lab) for sid, _ch, lab in SCAN_SERIES]
+    + [(sid, lab) for sid, _c, lab in COUNTRY_HEADLINES]
 )
-SERIES_ORDER = [sid for sid, _ch, _l in SCAN_SERIES] + [
-    sid for sid, _c, _ch, _l in COUNTRY_CELLS
-]
+SERIES_ORDER = (
+    [sid for sid, _ch, _l in SCAN_SERIES]
+    + [sid for sid, _c, _l in COUNTRY_HEADLINES]
+    + [sid for sid, _c, _ch, _l in COUNTRY_CELLS]
+)
 
 # FT-900 release schedule (8:30 ET), from census.gov/foreign-trade/reference/
 # release_schedule.html. Refresh annually - RUNBOOK "Schedule refresh".
@@ -224,7 +245,19 @@ def fetch_month(month, key, total=None):
             },
             key,
         )
-    return {"month": month, "scan": scan, "total": total, "cells": cells}
+    heads = {}
+    for sid, cty, _label in COUNTRY_HEADLINES:
+        time.sleep(POLITE_PAUSE)
+        heads[sid] = api_get(
+            {
+                "get": "I_COMMODITY,CON_VAL_MO,CAL_DUT_MO,DUT_VAL_MO",
+                "COMM_LVL": "HS2",
+                "CTY_CODE": cty,
+                "time": month,
+            },
+            key,
+        )
+    return {"month": month, "scan": scan, "total": total, "cells": cells, "heads": heads}
 
 
 def gate_problems(raw):
@@ -313,6 +346,17 @@ def gate_problems(raw):
             problems.append("%s dutiable value exceeds customs value" % sid)
     for n in notes:
         print("note: %s" % n)
+    for sid, _cty, _label in COUNTRY_HEADLINES:
+        rows = (raw.get("heads") or {}).get(sid)
+        if not rows:
+            problems.append("%s headline scan returned no data" % sid)
+            continue
+        ok = [r for r in rows if num(r, "CON_VAL_MO") is not None and num(r, "CAL_DUT_MO") is not None]
+        if len(ok) < MIN_HEAD_CHAPTERS:
+            problems.append(
+                "%s headline scan has %d populated chapters, need %d"
+                % (sid, len(ok), MIN_HEAD_CHAPTERS)
+            )
     return problems, chap
 
 
@@ -370,6 +414,14 @@ def compute_series(raw, chap):
         vals.append(_series_val(sid, *_sums(rows)))
     for sid, _cty, _ch, _label in COUNTRY_CELLS:
         vals.append(_series_val(sid, *_sums(raw["cells"][sid])))
+    for sid, _cty, _label in COUNTRY_HEADLINES:
+        rows = [
+            r for r in raw["heads"][sid]
+            if r.get("I_COMMODITY") not in ("98", "99")
+            and num(r, "CON_VAL_MO") is not None
+            and num(r, "CAL_DUT_MO") is not None
+        ]
+        vals.append(_series_val(sid, *_sums(rows)))
     return vals
 
 
@@ -725,7 +777,13 @@ def selftest():
                 "DUT_VAL_MO": "1900",
             }
         ]
-    raw = {"month": "2026-01", "scan": scan, "total": total, "cells": cells}
+    heads = {}
+    for sid, _cty, _label in COUNTRY_HEADLINES:
+        heads[sid] = [
+            {"I_COMMODITY": "%02d" % i, "CON_VAL_MO": "1000", "CAL_DUT_MO": "100", "DUT_VAL_MO": "900"}
+            for i in range(1, 61)
+        ] + [{"I_COMMODITY": "98", "CON_VAL_MO": "500", "CAL_DUT_MO": "0", "DUT_VAL_MO": "0"}]
+    raw = {"month": "2026-01", "scan": scan, "total": total, "cells": cells, "heads": heads}
     problems, chap = gate_problems(raw)
     assert problems == [], "gate should pass on the good fixture: %s" % problems
     vals = {v["series_id"]: v for v in compute_series(raw, chap)}
@@ -737,12 +795,17 @@ def selftest():
     assert vals["ETRX-CN-85"]["rate"] == 0.25
     assert vals["ETRX-CN-85"]["rate_dutiable"] == round(500 / 1900.0, 6)
     assert vals["ETRX-CN-85"]["duty_free_share"] == 0.05
+    assert vals["ETRX-CN"]["rate"] == 0.1, vals["ETRX-CN"]          # 98 excluded
+    assert vals["ETRX-CN"]["con_val"] == 60000, vals["ETRX-CN"]
+    thin = dict(raw, heads=dict(heads, **{"ETRX-TW": heads["ETRX-TW"][:10]}))
+    assert any("ETRX-TW" in p for p in gate_problems(thin)[0]), "gate must catch a thin headline scan"
     validate_series(list(vals.values()), "2026-01", {}, live=False, override_jump=False)
     bad = {
         "month": "2026-01",
         "scan": [r for r in scan if r["I_COMMODITY"] != "72"],
         "total": total,
         "cells": cells,
+        "heads": heads,
     }
     problems, _bad_chap = gate_problems(bad)
     assert any("72" in p for p in problems), "gate must catch a missing required chapter"
@@ -751,6 +814,7 @@ def selftest():
         "scan": scan,
         "total": total,
         "cells": dict(cells, **{"ETRX-CN-85": cells["ETRX-CN-85"] * 2}),
+        "heads": heads,
     }
     problems, _two_chap = gate_problems(two)
     assert any("exactly 1 row" in p for p in problems), "gate must catch RP splits"
